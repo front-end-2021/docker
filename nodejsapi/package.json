@@ -1,0 +1,18 @@
+{
+    "name": "docker_web_app",
+    "version": "1.0.0",
+    "description": "Node.js on Docker",
+    "author": "Dainb_",
+    "main": "server.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "body-parser": "^1.19.1",
+        "express": "^4.16.1",
+        "msnodesqlv8": "^2.4.4",
+        "mssql": "^7.3.0",
+        "tedious": "^14.0.0",
+        "uuid": "^8.3.2"
+    }
+}
