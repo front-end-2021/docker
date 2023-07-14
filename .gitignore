@@ -1,3 +1,6 @@
-/curl-7.81.0-x64-mingw/
-/curl-7.81.0-x64-mingw/*
-curl-7.81.0-win64-mingw.zip
+/Dotnet/Manage Target/.vs
+/Dotnet/Manage Target/.vs/*
+/Dotnet/Manage Target/obj
+/Dotnet/Manage Target/bin
+/Dotnet/Manage Target/Manage Target/bin
+/Dotnet/Manage Target/Manage Target/obj

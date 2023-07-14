@@ -1,0 +1,39 @@
+version: '3.4'
+
+services:
+  mssqlserver:
+    image: "mcr.microsoft.com/mssql/server:2019-latest"
+    container_name: mssqlserver
+    hostname: mssqlserver
+    volumes:
+      - vmngtarget:/var/opt/mssql
+    environment:
+      MSSQL_SA_PASSWORD: "P@ssw9rd"
+      ACCEPT_EULA: "Y"
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      - "11433:1433"
+
+  managetarget:
+    container_name: managetarget
+    image: ${DOCKER_REGISTRY-}managetarget
+    build:
+      context: .
+      dockerfile: Manage Target/Dockerfile
+    depends_on: [mssqlserver]
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  vmngtarget:
+
+networks:
+  frontend:
+    name: frontend
+  backend:
+    name: backend
