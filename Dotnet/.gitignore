@@ -4,3 +4,8 @@
 /Manage Target/bin
 /Manage Target/Manage Target/bin
 /Manage Target/Manage Target/obj
+
+/UserAPI/.vs
+/UserAPI/.vs/*
+/UserAPI/obj
+/UserAPI/bin

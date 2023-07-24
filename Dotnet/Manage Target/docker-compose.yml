@@ -29,11 +29,58 @@ services:
     ports:
       - "8080:80"
 
+  rabbitmqtarget:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmqtarget
+    volumes:
+      - rabbitdata:/var/lib/rabbitmq
+      - rabbitlog:/var/log/rabbitmq
+    networks:
+      - frontend
+      - backend
+      - backendreport
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  mssqlreport:
+    image: "mcr.microsoft.com/mssql/server:2019-latest"
+    container_name: mssqlreport
+    hostname: mssqlreport
+    volumes:
+      - dbreport:/var/opt/mssql
+    environment:
+      MSSQL_SA_PASSWORD: "P@ssw9rd"
+      ACCEPT_EULA: "Y"
+    restart: unless-stopped
+    networks:
+      - backendreport
+    ports:
+      - "11434:1433"
+
+  managereport:
+    container_name: managereport
+    image: ${DOCKER_REGISTRY-}managereport
+    build:
+      context: .
+      dockerfile: ../UserAPI/Dockerfile
+    depends_on: [mssqlreport]
+    networks:
+      - frontend
+      - backendreport
+    ports:
+      - "8088:80"
+
 volumes:
   vmngtarget:
+  rabbitdata:
+  rabbitlog:
+  dbreport:
 
 networks:
   frontend:
     name: frontend
   backend:
     name: backend
+  backendreport:
+    name: backendreport

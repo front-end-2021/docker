@@ -10,12 +10,14 @@ namespace Manage_Target.Controllers
     public class SettingController : ControllerBase
     {
         private readonly ManageContext _context;
-        public SettingController(ManageContext ctx)
+        private readonly ILogger<ItemController> _logger;
+        public SettingController(ManageContext ctx, ILogger<ItemController> logger)
         {
             _context = ctx;
+            _logger = logger;
         }
         [HttpGet]
-        public async Task<IEnumerable<Settings>> GetAllSetting()
+        public async Task<IEnumerable<Settings>> GetAll()
         {
             var settings = await _context.Settings.ToListAsync();
             if (settings == null || !settings.Any())
@@ -29,7 +31,7 @@ namespace Manage_Target.Controllers
             return settings;
         }
         [HttpGet("item/{id}")]
-        public async Task<ActionResult<Settings>> GetSettingByItemId(long id)
+        public async Task<ActionResult<Settings>> GetByItemId(long id)
         {
             var item = await _context.Items.FindAsync(id);
             if (item == null)
@@ -42,7 +44,7 @@ namespace Manage_Target.Controllers
             return setting;
         }
         [HttpGet("{id}")]
-        public async Task<ActionResult<Settings>> GetSetting(long id)
+        public async Task<ActionResult<Settings>> Get(long id)
         {
             var setting = await _context.Settings.FindAsync(id);
             if (setting == null)
@@ -67,7 +69,7 @@ namespace Manage_Target.Controllers
             var dbSetting = await _context.Settings.FirstAsync(x => x.IdItem == setting.IdItem);
             if(dbSetting != null)
             {
-                return Forbid($"Setting with IdItem = {setting.IdItem} existed");
+                return Forbid($"Setting with IdItem = {setting.IdItem} is existed");
             }
             try
             {
@@ -79,15 +81,11 @@ namespace Manage_Target.Controllers
                 Console.WriteLine(ex.Message);
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
             }
-            return CreatedAtAction(nameof(GetSetting), new { id = setting.Id }, setting);
+            return CreatedAtAction(nameof(Get), new { id = setting.Id }, setting);
         }
 
-        private bool SettingExists(long id)
-        {
-            return _context.Settings.Any(e => e.Id == id);
-        }
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSetting(long id, Settings entry)
+        public async Task<IActionResult> Update(long id, Settings entry)
         {
             if (id != entry.Id)
             {
@@ -111,7 +109,8 @@ namespace Manage_Target.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!SettingExists(id))
+                var hasS = await _context.Settings.AnyAsync(e => e.Id == id);
+                if (!hasS)
                 {
                     return NotFound();
                 }
@@ -124,7 +123,7 @@ namespace Manage_Target.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSetting(long id)
+        public async Task<IActionResult> Delete(long id)
         {
             var entry = await _context.Settings.FindAsync(id);
             if (entry == null)

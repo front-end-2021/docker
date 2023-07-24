@@ -1,4 +1,5 @@
 using Manage_Target.Context;
+using Manage_Target.DataServices.AsyncBusClient;
 using Manage_Target.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,17 +10,17 @@ namespace Manage_Target.Controllers
     [Route("[controller]")]
     public class ItemController : ControllerBase
     {
-        private readonly ILogger<ItemController> _logger;
         private readonly ManageContext _context;
+        private readonly IMessageBusClient _messageBusClient;
 
-        public ItemController(ManageContext ctx, ILogger<ItemController> logger)
+        public ItemController(ManageContext ctx, IMessageBusClient bClient)
         {
             _context = ctx;
-            _logger = logger;
+            _messageBusClient = bClient;
         }
         #region Get
         [HttpGet]
-        public async Task<IEnumerable<Item>> GetAllItem()
+        public async Task<IEnumerable<Item>> GetAll()
         {
             var items = await _context.Items.ToListAsync();
             if(items == null || !items.Any())
@@ -47,7 +48,7 @@ namespace Manage_Target.Controllers
             return items.OrderBy(i => i.Start);
         }
         [HttpGet("{id}")]
-        public async Task<ActionResult<Item>> GetItem(long id)
+        public async Task<ActionResult<Item>> Get(long id)
         {
             var item = await _context.Items.FindAsync(id);
             if (item == null)
@@ -80,14 +81,37 @@ namespace Manage_Target.Controllers
                 Console.WriteLine(ex.Message);
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
             }
-            return CreatedAtAction(nameof(GetItem), new { id = item.Id }, item);
+
+            #region Send Async message
+            if(item.OpenCost> 0)
+            {
+                PublishAsyncMessage(item, "Add_Report_Item");
+            }
+            #endregion
+            return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
         }
-        private bool ItemExists(long id)
+        private void PublishAsyncMessage(Item item, string strEvent)
         {
-            return _context.Items.Any(e => e.Id == id);
+            try
+            {
+                var publicItem = new ItemPublishDto()
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Start = item.Start,
+                    End = item.End,
+                    OpenCost = item.OpenCost,
+                    Event = strEvent
+                };
+                _messageBusClient.PublishEntry(publicItem);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not send asynchronously: {ex.Message}");
+            }
         }
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateItem(long id, [Bind("Id,Name,Start,End,OpenCost")]Item item)
+        public async Task<IActionResult> Update(long id, [Bind("Id,Name,Start,End,OpenCost")]Item item)
         {
             if (id != item.Id)
             {
@@ -99,10 +123,17 @@ namespace Manage_Target.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                if(item.OpenCost <= 0)
+                {
+                    DeleteAsyncMessage(id);
+                } else
+                {
+                    PublishAsyncMessage(item, "Update_Report_Item");
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ItemExists(id))
+                if (!_context.Items.Any(e => e.Id == id))
                 {
                     return NotFound();
                 }
@@ -113,9 +144,26 @@ namespace Manage_Target.Controllers
             }
             return Accepted();
         }
-
+        private void DeleteAsyncMessage(long id)
+        {
+            #region Send Async message
+            try
+            {
+                var entryDto = new EntryDeleteDto()
+                {
+                    Id = id,
+                    Event = "Delete_Report_Item"
+                };
+                _messageBusClient.PublishEntry(entryDto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not send asynchronously: {ex.Message}");
+            }
+            #endregion
+        }
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteItem(long id)
+        public async Task<IActionResult> Delete(long id)
         {
             var item = await _context.Items.FindAsync(id);
             if (item == null)
@@ -141,6 +189,7 @@ namespace Manage_Target.Controllers
 
             await _context.SaveChangesAsync();
 
+            DeleteAsyncMessage(id);
             return Ok();
         }
     }

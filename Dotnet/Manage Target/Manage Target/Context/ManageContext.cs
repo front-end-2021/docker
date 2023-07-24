@@ -5,9 +5,8 @@ namespace Manage_Target.Context
 {
     public class ManageContext : DbContext
     {
-        public ManageContext(DbContextOptions<ManageContext> opts) : base(opts) 
-        {
-        }
+        public ManageContext(DbContextOptions<ManageContext> opts) : base(opts) { }
+
         public DbSet<Item> Items { get; set; }
         public DbSet<Models.Task> Tasks { get; set; }
         public DbSet<Settings> Settings { get; set; }
