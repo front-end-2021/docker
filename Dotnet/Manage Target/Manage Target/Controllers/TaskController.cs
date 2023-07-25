@@ -90,6 +90,7 @@ namespace Manage_Target.Controllers
         }
         private void PublishAsyncMessage(Models.Task task, string strEvent)
         {
+            if (string.IsNullOrEmpty(task.Name)) return;
             try
             {
                 var publicTask = new TaskPublishDto()

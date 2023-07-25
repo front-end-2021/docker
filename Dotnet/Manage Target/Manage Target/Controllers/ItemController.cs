@@ -92,6 +92,7 @@ namespace Manage_Target.Controllers
         }
         private void PublishAsyncMessage(Item item, string strEvent)
         {
+            if (string.IsNullOrEmpty(item.Name)) return;
             try
             {
                 var publicItem = new ItemPublishDto()

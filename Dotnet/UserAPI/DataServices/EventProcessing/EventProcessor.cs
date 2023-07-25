@@ -46,6 +46,7 @@ namespace Manage_Target.DataServices.EventProcessing
                 var repo = scope.ServiceProvider.GetRequiredService<IReportRepo>();
                 var task = JsonSerializer.Deserialize<TaskPublishDto>(message);
                 if (task == null) return;
+                if(string.IsNullOrEmpty(task.Name)) return;
                 try
                 {
                     var report = new Report() {
@@ -76,16 +77,17 @@ namespace Manage_Target.DataServices.EventProcessing
             using(var scope = _scopeFactory.CreateScope())
             {
                 var repo = scope.ServiceProvider.GetRequiredService<IReportRepo>();
-                var item = JsonSerializer.Deserialize<TaskPublishDto>(message);
-                if (item == null) return;
+                var task = JsonSerializer.Deserialize<TaskPublishDto>(message);
+                if (task == null) return;
+                if (string.IsNullOrEmpty(task.Name)) return;
                 var report = new Report()
                 {
-                    IdTask = item.Id,
-                    IdItem = item.IdItem,
-                    Name = item.Name,
-                    Start = item.Start,
-                    End = item.End,
-                    ActualCost = item.ActualCost
+                    IdTask = task.Id,
+                    IdItem = task.IdItem,
+                    Name = task.Name,
+                    Start = task.Start,
+                    End = task.End,
+                    ActualCost = task.ActualCost
                 };
                 if (repo.ModifyReportState(report))
                     repo.SaveChanges();
@@ -121,6 +123,7 @@ namespace Manage_Target.DataServices.EventProcessing
                 var repo = scope.ServiceProvider.GetRequiredService<IReportRepo>();
                 var item = JsonSerializer.Deserialize<ItemPublishDto>(message);
                 if (item == null) return;
+                if (string.IsNullOrEmpty(item.Name)) return;
                 var report = new Report()
                 {
                     IdItem = item.Id,
@@ -140,6 +143,7 @@ namespace Manage_Target.DataServices.EventProcessing
                 var repo = scope.ServiceProvider.GetRequiredService<IReportRepo>();
                 var item = JsonSerializer.Deserialize<ItemPublishDto>(message);
                 if (item == null) return;
+                if (string.IsNullOrEmpty(item.Name)) return;
                 try
                 {
                     var report = new Report() {
