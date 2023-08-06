@@ -35,6 +35,16 @@ namespace Manage_Target.Controllers
             }
             return items.Where(x => x.IdTask == null).OrderBy(i => i.Start);
         }
+        [HttpGet("task/")]
+        public async Task<IEnumerable<Report>> GetAllTask()
+        {
+            var items = await _context.Reports.ToListAsync();
+            if (items == null || !items.Any())
+            {
+                return new List<Report>();
+            }
+            return items.Where(x => x.IdTask != null).OrderBy(i => i.Start);
+        }
         [HttpGet("item/{id}")]
         public async Task<IEnumerable<Report>> GetAllTaskBy(long id)
         {

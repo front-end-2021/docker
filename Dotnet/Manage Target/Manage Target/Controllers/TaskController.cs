@@ -1,6 +1,5 @@
 ﻿using Manage_Target.Context;
 using Manage_Target.DataServices.AsyncBusClient;
-using Manage_Target.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
