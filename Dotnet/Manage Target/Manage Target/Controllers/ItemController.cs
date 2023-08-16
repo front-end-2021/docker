@@ -1,5 +1,6 @@
 using Manage_Target.Context;
 using Manage_Target.DataServices.AsyncBusClient;
+using Manage_Target.DataServices.Caching;
 using Manage_Target.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,29 +13,19 @@ namespace Manage_Target.Controllers
     {
         private readonly ManageContext _context;
         private readonly IMessageBusClient _messageBusClient;
-
-        public ItemController(ManageContext ctx, IMessageBusClient bClient)
+        private readonly InMemCache memCache;
+        public ItemController(ManageContext ctx, IMessageBusClient bClient, InMemCache cache)
         {
             _context = ctx;
             _messageBusClient = bClient;
+            memCache = cache;
         }
         #region Get
         [HttpGet]
         public async Task<IEnumerable<Item>> GetAll()
         {
-            var items = await _context.Items.ToListAsync();
-            if(items == null || !items.Any())
-            {
-                return Enumerable.Range(1, 5).Select(index => new Item
-                {
-                    Id = index,
-                    Name = $"Test Item {index}",
-                    Start = DateTime.Now,
-                    End = DateTime.Now.AddDays(index)
-                }).ToArray();
-            }
-
-            var tasks = await _context.Tasks.ToListAsync();
+            var items = await GetCacheItems();// await _context.Items.ToListAsync();
+            var tasks = await GetCacheTasks();// _context.Tasks.ToListAsync();
             if (tasks != null && tasks.Any())
             {
                 Parallel.ForEach(items, (item) =>
@@ -50,7 +41,8 @@ namespace Manage_Target.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Item>> Get(long id)
         {
-            var item = await _context.Items.FindAsync(id);
+            var items = await GetCacheItems();
+            var item = items.FirstOrDefault(x => x.Id == id);// await _context.Items.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
@@ -75,6 +67,7 @@ namespace Manage_Target.Controllers
             {
                 _context.Items.Add(item);
                 await _context.SaveChangesAsync();
+                memCache.ClearCache(CacheKeys.Items);
             }
             catch (DbUpdateException ex )
             {
@@ -124,7 +117,8 @@ namespace Manage_Target.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                if(item.OpenCost <= 0)
+                memCache.ClearCache(CacheKeys.Items);
+                if (item.OpenCost <= 0)
                 {
                     DeleteAsyncMessage(id);
                 } else
@@ -189,9 +183,44 @@ namespace Manage_Target.Controllers
             }
 
             await _context.SaveChangesAsync();
-
+            memCache.ClearCache(CacheKeys.Items);
             DeleteAsyncMessage(id);
             return Ok();
+        }
+        
+        private async Task<IEnumerable<Item>> GetCacheItems()
+        {
+            var items = await memCache.GetList(CacheKeys.Items, 
+                () => _context.Items.ToListAsync());
+
+            if (items == null)
+            {
+                return Enumerable.Range(1, 5).Select(index => new Item
+                {
+                    Id = index,
+                    Name = $"Test Item {index}",
+                    Start = DateTime.Now,
+                    End = DateTime.Now.AddDays(index)
+                }).ToArray();
+            }
+            return items;
+        }
+        private async Task<IEnumerable<Models.Task>> GetCacheTasks()
+        {
+            var tasks = await memCache.GetList(CacheKeys.Tasks, 
+                () => _context.Tasks.ToListAsync());
+
+            if (tasks == null)
+            {
+                return Enumerable.Range(1, 5).Select(index => new Models.Task
+                {
+                    Id = index,
+                    Name = $"Test TAsk {index}",
+                    Start = DateTime.Now,
+                    End = DateTime.Now.AddDays(index)
+                }).ToArray();
+            }
+            return tasks;
         }
     }
 }

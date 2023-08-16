@@ -1,5 +1,6 @@
 using Manage_Target.Context;
 using Manage_Target.DataServices.AsyncBusClient;
+using Manage_Target.DataServices.Caching;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,7 @@ builder.Services.AddDbContext<ManageContext>(opts =>
     opts.UseSqlServer(builder.Configuration.GetConnectionString("mssql")));
 
 builder.Services.AddSingleton<IMessageBusClient, MessageBusClient>();
+builder.Services.AddSingleton<InMemCache>();
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())

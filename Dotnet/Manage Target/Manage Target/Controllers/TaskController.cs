@@ -1,5 +1,6 @@
 ﻿using Manage_Target.Context;
 using Manage_Target.DataServices.AsyncBusClient;
+using Manage_Target.DataServices.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,32 +12,26 @@ namespace Manage_Target.Controllers
     {
         private readonly ManageContext _context;
         private readonly IMessageBusClient _messageBusClient;
-        public TaskController(ManageContext ctx, IMessageBusClient bClient)
+        private readonly InMemCache memCache;
+        public TaskController(ManageContext ctx, IMessageBusClient bClient, InMemCache cache)
         {
             _context= ctx;
             _messageBusClient = bClient;
+            memCache = cache;
         }
         #region Get
         [HttpGet]
         public async Task<IEnumerable<Models.Task>> GetAll()
         {
-            var tasks = await _context.Tasks.ToListAsync();
-            if (tasks == null || !tasks.Any())
-            {
-                return Enumerable.Range(1, 5).Select(index => new Models.Task
-                {
-                    Id = index,
-                    Name = $"Test TAsk {index}",
-                    Start = DateTime.Now,
-                    End = DateTime.Now.AddDays(index)
-                }).ToArray();
-            }
+            var tasks = await GetCacheTasks();// await _context.Tasks.ToListAsync();
+            
             return tasks.OrderBy(t => t.IdItem).ThenBy(t => t.Start);
         }
         [HttpGet("{id}")]
         public async Task<ActionResult<Models.Task>> Get(long id)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var tasks = await GetCacheTasks();
+            var task = tasks.FirstOrDefault(t => t.Id == id);// await _context.Tasks.FindAsync(id);
             if (task == null)
             {
                 return NotFound();
@@ -46,11 +41,7 @@ namespace Manage_Target.Controllers
         [HttpGet("item/{id}")]
         public async Task<IEnumerable<Models.Task>> GetByItemId(long id)
         {
-            var tasks = await _context.Tasks.ToListAsync();
-            if (tasks == null || !tasks.Any())
-            {
-                return new List<Models.Task>();
-            }
+            var tasks = await GetCacheTasks(); //await _context.Tasks.ToListAsync();
             return tasks.Where(t => t.IdItem == id).OrderBy(t => t.IdItem).ThenBy(t => t.Start);
         }
         #endregion Get
@@ -75,6 +66,7 @@ namespace Manage_Target.Controllers
             {
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
+                memCache.ClearCache(CacheKeys.Tasks);
             }
             catch (DbUpdateException ex)
             {
@@ -178,6 +170,25 @@ namespace Manage_Target.Controllers
 
             DeleteAsyncMessage(id);
             return Ok();
+        }
+
+        private async Task<IEnumerable<Models.Task>> GetCacheTasks()
+        {
+            var tasks = await memCache.GetList(CacheKeys.Tasks,
+                () => _context.Tasks.ToListAsync());
+
+            if (tasks == null)
+            {
+                return Enumerable.Range(1, 5).Select(index => new Models.Task
+                {
+                    Id = index,
+                    IdItem = -1,
+                    Name = $"Test TAsk {index}",
+                    Start = DateTime.Now,
+                    End = DateTime.Now.AddDays(index)
+                }).ToArray();
+            }
+            return tasks;
         }
     }
 }
