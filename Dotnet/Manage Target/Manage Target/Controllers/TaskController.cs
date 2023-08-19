@@ -66,7 +66,7 @@ namespace Manage_Target.Controllers
             {
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
-                memCache.ClearCache(CacheKeys.Tasks);
+                memCache.ClearCache<Models.Task>();
             }
             catch (DbUpdateException ex)
             {
@@ -174,8 +174,7 @@ namespace Manage_Target.Controllers
 
         private async Task<IEnumerable<Models.Task>> GetCacheTasks()
         {
-            var tasks = await memCache.GetList(CacheKeys.Tasks,
-                () => _context.Tasks.ToListAsync());
+            var tasks = await memCache.GetList(() => _context.Tasks.ToListAsync());
 
             if (tasks == null)
             {

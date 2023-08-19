@@ -67,7 +67,7 @@ namespace Manage_Target.Controllers
             {
                 _context.Items.Add(item);
                 await _context.SaveChangesAsync();
-                memCache.ClearCache(CacheKeys.Items);
+                memCache.ClearCache<Item>();
             }
             catch (DbUpdateException ex )
             {
@@ -117,7 +117,7 @@ namespace Manage_Target.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                memCache.ClearCache(CacheKeys.Items);
+                memCache.ClearCache<Item>();
                 if (item.OpenCost <= 0)
                 {
                     DeleteAsyncMessage(id);
@@ -183,15 +183,14 @@ namespace Manage_Target.Controllers
             }
 
             await _context.SaveChangesAsync();
-            memCache.ClearCache(CacheKeys.Items);
+            memCache.ClearCache<Item>();
             DeleteAsyncMessage(id);
             return Ok();
         }
         
         private async Task<IEnumerable<Item>> GetCacheItems()
         {
-            var items = await memCache.GetList(CacheKeys.Items, 
-                () => _context.Items.ToListAsync());
+            var items = await memCache.GetList(() => _context.Items.ToListAsync());
 
             if (items == null)
             {
@@ -207,8 +206,7 @@ namespace Manage_Target.Controllers
         }
         private async Task<IEnumerable<Models.Task>> GetCacheTasks()
         {
-            var tasks = await memCache.GetList(CacheKeys.Tasks, 
-                () => _context.Tasks.ToListAsync());
+            var tasks = await memCache.GetList(() => _context.Tasks.ToListAsync());
 
             if (tasks == null)
             {

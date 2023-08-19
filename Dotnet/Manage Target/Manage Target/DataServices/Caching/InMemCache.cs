@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Caching.Memory;
 
 namespace Manage_Target.DataServices.Caching
 {
@@ -17,20 +16,37 @@ namespace Manage_Target.DataServices.Caching
             cacheEntryOptions.SetSize(1);
             return cacheEntryOptions;
         }
-        public async Task<IEnumerable<T>> GetList<T>(string cacheKey, Func<Task<List<T>>> func)
+        public async Task<IEnumerable<T>> GetList<T>(Func<Task<List<T>>> func)
         {
-            if (!Cache.TryGetValue(cacheKey, out List<T> items))
-            {
-                items = await func();
-                if (items != null)
-                {
-                    Cache.Set(cacheKey, items, GetCacheEntryOption());
-                }
-            }
-            return items;
+            var cacheKey = GetCacheKey<T>();
+            if (string.IsNullOrEmpty(cacheKey)) return new List<T>();
+
+            if (Cache.TryGetValue(cacheKey, out IEnumerable<T> list)) return list ?? new List<T>();
+
+            list = await func();
+            if (list == null) return new List<T>();
+
+            Cache.Set(cacheKey, list, GetCacheEntryOption());
+            return list;
         }
-        public void ClearCache(string cacheKey)
+        private string GetCacheKey<T>()
         {
+            switch (typeof(T).FullName)
+            {
+                case "Manage_Target.Models.Item":
+                    return CacheKeys.Items;
+                case "Manage_Target.Models.Task":
+                    return CacheKeys.Tasks;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        public void ClearCache<T>()
+        {
+            string cacheKey = GetCacheKey<T>();
+            if(string.IsNullOrEmpty(cacheKey)) return;
+
             Cache.Remove(cacheKey);
             //Cache.Clear();
         }
@@ -39,5 +55,6 @@ namespace Manage_Target.DataServices.Caching
     {
         public const string Items = "1. List Item";
         public const string Tasks = "2. List Task";
+        public const string Entry = "_Entry";
     }
 }
