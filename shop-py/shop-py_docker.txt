@@ -1,0 +1,3 @@
+docker build -t shop-example .
+docker run -d --name shop-example-app -p 8000:8000 shop-example
+docker logs shop-example-app
